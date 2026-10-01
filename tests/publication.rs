@@ -265,3 +265,12 @@ shared_test!(cache_refuses_signed_rollback_and_equivocation, {
         Err(Error::Rollback)
     );
 });
+
+shared_test!(candidate_cannot_be_installed_before_it_was_authenticated, {
+    let (mut source, _) = source("alpha", 10, 1);
+    let candidate = block_on(collect(&mut source, NOW)).unwrap();
+    assert_eq!(
+        Beacon::default().install(candidate, NOW - 1),
+        Err(Error::ClockRegression)
+    );
+});

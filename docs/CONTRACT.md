@@ -10,10 +10,22 @@ come from the configured publication owner. Beacon verifies protected kinds,
 issuer, lifetime, community, epoch and positive publication revisions against the
 manifest before constructing a cache candidate. It does not re-sign documents.
 The public feed is a current view, never an activity log. Expiry, clock regression,
-rollback and conflicting bytes at equal revisions refuse. Announcement consumers
+rollback and conflicting bytes at equal revisions refuse. A candidate cannot be
+installed before its authenticated collection time. Announcement consumers
 must fetch and authenticate the whole feed; hints are not authority.
 
 No clocks, sockets, SQL, private keys or FSL dependency are owned here. The door
 owns HTTP waiting and cancellation. cplc serializes publication under its existing
 policy lock and persists counters before returning signed bytes. Independent
 native/wasm signatures and original door fixtures are required before acceptance.
+
+## Global reuse
+
+`document::Cache<T>` retains one original signed public document, authenticating
+it with the configured owner's ring. The owning type implements `Document` to
+fix the expected protected kind, validate its existing payload purpose/scope and
+extract signed policy floors.
+Policy revision, epoch and signed issuance cannot regress. Equal policy floors
+allow a freshly signed lifetime only if the typed payload is unchanged. Distinct
+issuer scopes cannot share a cache. No generic community manifest is fabricated
+for global status and no private global revocation data becomes public.

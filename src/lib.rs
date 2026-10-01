@@ -1,5 +1,6 @@
 //! Beacon assembles signed public trust publications with injected I/O and time.
 #![forbid(unsafe_code)]
+pub mod document;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -107,6 +108,7 @@ struct Snapshot {
 
 /// Authenticated complete candidate. Only collection from a Publisher creates it.
 pub struct Publication {
+    observed_at: u64,
     community: String,
     feed: Arc<Feed>,
     deadline: u64,
@@ -170,6 +172,7 @@ pub async fn collect(publisher: &mut impl Publisher, now: u64) -> Result<Publica
         deadline = deadline.min(until);
     }
     Ok(Publication {
+        observed_at: now,
         community: view.community,
         feed: Arc::new(feed),
         deadline,
@@ -218,6 +221,9 @@ impl Beacon {
     }
     pub fn install(&mut self, candidate: Publication, now: u64) -> Result<Arc<Feed>> {
         self.observe(now)?;
+        if now < candidate.observed_at {
+            return Err(Error::ClockRegression);
+        }
         if now >= candidate.deadline {
             return Err(Error::Expired);
         }

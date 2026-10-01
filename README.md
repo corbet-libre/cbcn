@@ -19,3 +19,9 @@ network protocol or storage engine is introduced.
 Stream A includes Dependabot Cargo/Actions, protected exact-head auto-merge,
 one CI-resolved lock, strict line/branch gates and executed native/wasm vectors.
 No npm manifest exists. No registry publication. See [contract](docs/CONTRACT.md).
+
+`document::Cache<T>` is the shared global-publication port. csgn authenticates
+the original envelope; the owner implements `Document` for its existing public
+status type. Equal policy versions permit envelope refresh only with identical
+payloads and nondecreasing signed issuance. Private suspension lists remain in
+the global facade and never enter this cache.

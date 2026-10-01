@@ -86,7 +86,7 @@ jobs:
       - name: Execute shared wasm vectors
         env:
           CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
-        run: cargo test --locked --target wasm32-unknown-unknown --test publication
+        run: cargo test --locked --target wasm32-unknown-unknown --test publication --test document
   coverage:
     needs: [resolve, check]
     runs-on: ubuntu-24.04
