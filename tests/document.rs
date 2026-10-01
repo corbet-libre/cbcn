@@ -1,3 +1,4 @@
+//! Real signed document cache vectors shared by native and wasm.
 use cbcn::{Error, document::*};
 use csgn::{Kind, SecretKey, Signer};
 use serde::{Deserialize, Serialize};
@@ -61,7 +62,10 @@ fn signed_document_cache_retains_scope_floors_and_exact_bytes() {
         (1, 1, 100, 1, Error::Rollback),
         (1, 1, 101, 2, Error::Equivocation),
     ] {
-        let bytes = signed(&mut s, revision, epoch, issued, key);
+        // A separately captured older envelope uses the same real signing key.
+        // The live signer itself correctly refuses to move its clock backward.
+        let mut historical = signer("global");
+        let bytes = signed(&mut historical, revision, epoch, issued, key);
         assert_eq!(cache.install(s.key_ring(), bytes, 200), Err(expected));
     }
     let newer = signed(&mut s, 2, 2, 102, 2);

@@ -7,7 +7,9 @@ use std::sync::Arc;
 /// Authenticated owner version. This is a policy floor, not a member event.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Version {
+    /// Positive publication policy revision.
     pub revision: u64,
+    /// Positive authority epoch.
     pub epoch: u64,
 }
 
@@ -15,7 +17,9 @@ pub struct Version {
 /// Validate purpose, issuer/scope and all payload invariants. Do not infer fields
 /// absent from the signed payload. This port performs no signing or I/O.
 pub trait Document: DeserializeOwned + PartialEq {
+    /// Required protected envelope kind.
     const KIND: csgn::Kind;
+    /// Validate owner semantics and return authenticated publication floors.
     fn version(&self, issuer: &str) -> Result<Version>;
 }
 
