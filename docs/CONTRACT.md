@@ -29,3 +29,16 @@ Policy revision, epoch and signed issuance cannot regress. Equal policy floors
 allow a freshly signed lifetime only if the typed payload is unchanged. Distinct
 issuer scopes cannot share a cache. No generic community manifest is fabricated
 for global status and no private global revocation data becomes public.
+
+## Public key continuity transport
+
+The publication owner supplies `key_transitions`: original signed csgn proofs
+with separate public ring-change revisions. Beacon transports them unchanged.
+`validate_transition_history` checks only a strictly increasing positive sequence,
+nonempty proofs, at most 256 changes and at most 1 MiB of proof bytes. It does not
+verify signatures or grant publishing authority. Charter authenticates every new
+transition against its configured or installed predecessor. cplc must durably
+retain each pending csgn proof before acknowledging it; ordinary issuance never
+increments this public ring sequence. History exhaustion refuses rotation instead
+of silently dropping continuity. Initial feeds omit the empty optional field and
+remain byte-compatible with the existing door protocol.
