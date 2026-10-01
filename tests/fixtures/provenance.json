@@ -1,0 +1,20 @@
+{
+  "producer_repository": "https://github.com/corbet-foss/cchr",
+  "producer_revision": "d3593482c1bdb085c19171d6b95835e698ef769c",
+  "ci_url": "https://github.com/corbet-foss/cchr/actions/runs/36879511545",
+  "door_revision": "83c163e4239923fa45e38e3712561c42c90f16d8",
+  "sha256": {
+    "initial.json": "cfadbcfc7678b7ae90de908f1a8ab0884f332fc5d03a8197d1726ba93fc4dc57",
+    "ordinary.json": "cfadbcfc7678b7ae90de908f1a8ab0884f332fc5d03a8197d1726ba93fc4dc57",
+    "all.json": "67533a20c40dd757722d84978be7195af67cf0abe3cdeb339cd401f93acaf8c9",
+    "any.json": "82089a193a0da432c58bf151f61d0139e716489a51db4b11a153e87704dc628f",
+    "threshold.json": "fc55e96ac181d86c63b4e030ba2b33a57e7d3b83797a62bffc4733e67e0135bb",
+    "schema.json": "6b360169bbbef88fbf378528c2014fb4c9cfe112ac55561fb798d6e44bf1d0b2",
+    "revoked.json": "42207b911fc83656b8547fecf47a9cb9c4aaba5d3e3ad4a6b4467d8fd912e944",
+    "all-announcement.json": "8140614557e857ce21d1f9ea10569456cd4a18b153252f422c593e28983f7f4a",
+    "any-announcement.json": "d396241d3b37b359ac8533a2f4d69c75ddeee2c332a930789c0645ba6b39f8d2",
+    "threshold-announcement.json": "6dcdef4114d65f3360bbdcf402e5a7957b6d83fb9ef474c255895c18730a1476",
+    "schema-announcement.json": "d5d7a48a3d25ced25c743ad9eb53b4827baccd22225d6c86df8fab4f9229176a",
+    "revoked-announcement.json": "eb2319b872924b4200a71524fdd788be10f1db5bbd901b1b4421a493689aaa38"
+  }
+}
