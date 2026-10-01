@@ -20,6 +20,9 @@ impl Publisher for Source {
     fn key_ring(&self) -> Result<csgn::KeyRing> {
         Ok(self.ring.clone())
     }
+    fn key_transitions(&self) -> Result<Vec<KeyTransition>> {
+        Ok(self.feed.key_transitions.clone())
+    }
     async fn publish(&mut self, kind: Kind, _: u64) -> Result<Vec<u8>> {
         if self.fail == Some(kind) {
             return Err(Error::Publication);
@@ -76,6 +79,7 @@ fn source(community: &str, revision: u64, epoch: u64) -> (Source, Signer) {
                 revision,
                 policy_epoch: epoch,
                 key_ring: signer.key_ring().to_cbor(),
+                key_transitions: vec![],
                 manifest,
                 settings,
                 schema,
@@ -272,5 +276,78 @@ shared_test!(candidate_cannot_be_installed_before_it_was_authenticated, {
     assert_eq!(
         Beacon::default().install(candidate, NOW - 1),
         Err(Error::ClockRegression)
+    );
+});
+
+shared_test!(transition_transport_bounds_never_assert_authentication, {
+    let valid = KeyTransition {
+        revision: 1,
+        proof: vec![1],
+    };
+    validate_transition_history(&[]).unwrap();
+    validate_transition_history(std::slice::from_ref(&valid)).unwrap();
+    for bad in [
+        vec![valid.clone(); MAX_KEY_TRANSITIONS + 1],
+        vec![KeyTransition {
+            revision: 0,
+            proof: vec![1],
+        }],
+        vec![KeyTransition {
+            revision: 1,
+            proof: vec![],
+        }],
+        vec![valid.clone(), valid.clone()],
+        vec![KeyTransition {
+            revision: 1,
+            proof: vec![1; MAX_KEY_TRANSITION_BYTES + 1],
+        }],
+        vec![
+            KeyTransition {
+                revision: 1,
+                proof: vec![1; MAX_KEY_TRANSITION_BYTES],
+            },
+            KeyTransition {
+                revision: 2,
+                proof: vec![1],
+            },
+        ],
+    ] {
+        assert_eq!(validate_transition_history(&bad), Err(Error::Incoherent));
+    }
+    // Shape-valid bytes are deliberately not described as verified signatures.
+    let (mut source, _) = source("alpha", 10, 1);
+    source.feed.key_transitions = vec![valid];
+    let candidate = block_on(collect(&mut source, NOW)).unwrap();
+    let feed = Beacon::default().install(candidate, NOW).unwrap();
+    assert_eq!(feed.key_transitions, source.feed.key_transitions);
+    let encoded = serde_json::to_vec(&*feed).unwrap();
+    assert_eq!(serde_json::from_slice::<Feed>(&encoded).unwrap(), *feed);
+});
+
+shared_test!(legacy_publishers_keep_the_original_empty_history_wire, {
+    struct Legacy(Source);
+    impl Publisher for Legacy {
+        fn key_ring(&self) -> Result<csgn::KeyRing> {
+            self.0.key_ring()
+        }
+        async fn publish(&mut self, kind: Kind, now: u64) -> Result<Vec<u8>> {
+            self.0.publish(kind, now).await
+        }
+        async fn manifest(&mut self, now: u64) -> Result<Vec<u8>> {
+            self.0.manifest(now).await
+        }
+    }
+    let (source, _) = source("alpha", 10, 1);
+    let original = serde_json::to_vec(&source.feed).unwrap();
+    let candidate = block_on(collect(&mut Legacy(source), NOW)).unwrap();
+    let feed = Beacon::default().install(candidate, NOW).unwrap();
+    assert!(feed.key_transitions.is_empty());
+    assert_eq!(serde_json::to_vec(&*feed).unwrap(), original);
+    assert!(
+        !serde_json::to_value(&*feed)
+            .unwrap()
+            .as_object()
+            .unwrap()
+            .contains_key("key_transitions")
     );
 });

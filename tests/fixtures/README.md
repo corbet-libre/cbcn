@@ -1,7 +1,7 @@
 # Actual cvld public trust publications
 
 These unchanged JSON responses were captured by the running global/community
-cvld door in [cchr CI](https://github.com/corbet-foss/cchr/actions/runs/36879511545).
+cvld door in [cchr CI](https://github.com/corbet-foss/cchr/actions/runs/36911320705).
 The services use a temporary libSQL store and synthetic users, real software
 WebAuthn credentials, and real BBS proofs. No external account is involved.
 

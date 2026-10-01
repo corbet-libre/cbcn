@@ -57,6 +57,10 @@ const MAX_COSE_BYTES: usize = (1 << 20) + 8192;
 /// Serialize the whole collect operation with policy mutations and key rotation.
 pub trait Publisher: Send {
     fn key_ring(&self) -> Result<csgn::KeyRing>;
+    /// Original durable public ring proofs retained by the publication owner.
+    fn key_transitions(&self) -> Result<Vec<KeyTransition>> {
+        Ok(Vec::new())
+    }
     fn publish(&mut self, kind: Kind, now: u64) -> impl Future<Output = Result<Vec<u8>>> + Send;
     fn manifest(&mut self, now: u64) -> impl Future<Output = Result<Vec<u8>>> + Send;
 }
@@ -68,6 +72,8 @@ pub struct Feed {
     pub revision: u64,
     pub policy_epoch: u64,
     pub key_ring: Vec<u8>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub key_transitions: Vec<KeyTransition>,
     pub manifest: Vec<u8>,
     pub settings: Vec<u8>,
     pub schema: Vec<u8>,
@@ -85,6 +91,34 @@ impl Feed {
             &self.schema_versions,
         ]
     }
+}
+
+/// Original signed ring-change bytes, not authority by type.
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct KeyTransition {
+    pub revision: u64,
+    pub proof: Vec<u8>,
+}
+/// Retained public changes are bounded independently of member activity.
+pub const MAX_KEY_TRANSITIONS: usize = 256;
+pub const MAX_KEY_TRANSITION_BYTES: usize = 1 << 20;
+
+/// Check transport/storage shape only. Charter authenticates configured continuity.
+pub fn validate_transition_history(history: &[KeyTransition]) -> Result<()> {
+    if history.len() > MAX_KEY_TRANSITIONS {
+        return Err(Error::Incoherent);
+    }
+    let mut revision = 0;
+    let mut size = 0usize;
+    for item in history {
+        size = size.saturating_add(item.proof.len());
+        if item.revision <= revision || item.proof.is_empty() || size > MAX_KEY_TRANSITION_BYTES {
+            return Err(Error::Incoherent);
+        }
+        revision = item.revision;
+    }
+    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -125,6 +159,8 @@ pub async fn collect(publisher: &mut impl Publisher, now: u64) -> Result<Publica
     let schema_versions = publisher.publish(Kind::SchemaVersions, now).await?;
     let manifest = publisher.manifest(now).await?;
     let ring = publisher.key_ring()?;
+    let key_transitions = publisher.key_transitions()?;
+    validate_transition_history(&key_transitions)?;
     let (view, mut deadline): (Manifest, _) =
         verify(&ring, &manifest, csgn::Kind::SettingsSnapshot, now)?;
     if view.purpose != "cplc.trust.v1"
@@ -142,6 +178,7 @@ pub async fn collect(publisher: &mut impl Publisher, now: u64) -> Result<Publica
         revision: view.revision,
         policy_epoch: view.policy_epoch,
         key_ring: view.key_ring,
+        key_transitions,
         manifest,
         settings,
         schema,

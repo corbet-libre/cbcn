@@ -14,8 +14,9 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.repository }}
+  cancel-in-progress: false
+  queue: max
 env:
   CARGO_BUILD_JOBS: 2
   CARGO_TERM_COLOR: never
@@ -36,10 +37,14 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
           cache-on-failure: true
+      - name: Verify the committed dependency snapshot before refreshing
+        run: |
+          cargo metadata --locked --format-version 1 > dependency-metadata.json
+          python3 .github/check-first-party.py
       - name: Refresh one reproducible dependency snapshot
         run: cargo update
       - name: Resolve one snapshot for every job
-        run: cargo metadata --format-version 1 > dependency-metadata.json
+        run: cargo metadata --locked --format-version 1 > dependency-metadata.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: resolved-lock
@@ -55,6 +60,8 @@ jobs:
           name: rustfmt-patch
           path: rustfmt.patch
       - run: test ! -s rustfmt.patch
+      - run: python3 .github/check-first-party.py
+      - run: python3 .github/test-check-source-coverage.py
   check:
     needs: resolve
     runs-on: ubuntu-24.04
@@ -72,7 +79,7 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
           cache-on-failure: true
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: resolved-lock
           path: .
@@ -108,18 +115,24 @@ jobs:
         with:
           tool: cargo-llvm-cov
       - run: rustc --version
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: resolved-lock
           path: .
       - name: Measure production lines and branches
-        run: cargo llvm-cov --locked --branch --ignore-filename-regex '(^|/)(tests|scripts)/' --json --output-path coverage.json
+        run: |
+          cargo llvm-cov --locked --branch --ignore-filename-regex '(^|/)(tests|scripts)/' --json --output-path coverage.json
+          cargo llvm-cov report --branch --ignore-filename-regex '(^|/)(tests|scripts)/' --lcov --output-path coverage.lcov
+          cargo llvm-cov report --branch --ignore-filename-regex '(^|/)(tests|scripts)/' --text --show-instantiations > coverage.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: coverage
-          path: coverage.json
-      - run: python3 .github/check-coverage.py coverage.json
+          path: |
+            coverage.json
+            coverage.lcov
+            coverage.txt
+      - run: python3 .github/check-source-coverage.py coverage.lcov coverage.json coverage.txt
   dependency-policy:
     needs: resolve
     runs-on: ubuntu-24.04
@@ -129,7 +142,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: resolved-lock
       - run: python3 .github/check-first-party.py
