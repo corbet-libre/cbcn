@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Require main declarations and one exact locked revision per first-party crate."""
 import json
+import argparse
 import re
-import sys
 import tomllib
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -69,11 +69,15 @@ def self_test():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--self-test', action='store_true')
+    parser.add_argument('--metadata', type=Path)
+    args = parser.parse_args()
     self_test()
-    if '--self-test' not in sys.argv:
+    if not args.self_test:
         check_packages(tomllib.loads(Path('Cargo.lock').read_text())['package'])
-        metadata = Path('dependency-metadata.json')
-        if metadata.exists():
+        metadata = args.metadata or Path('dependency-metadata.json')
+        if args.metadata or metadata.exists():
             check_packages(json.loads(metadata.read_text())['packages'])
         for manifest in Path('.').rglob('Cargo.toml'):
             if not {'.git', '.build', 'target', 'node_modules'}.intersection(manifest.parts):

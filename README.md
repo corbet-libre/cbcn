@@ -25,3 +25,16 @@ the original envelope; the owner implements `Document` for its existing public
 status type. Equal policy versions permit envelope refresh only with identical
 payloads and nondecreasing signed issuance. Private suspension lists remain in
 the global facade and never enter this cache.
+
+## Balance public material
+
+The separate `balance` feed field carries the original canonical
+`cblc.public-verifier.v1` COSE document. `Publisher::balance` returns absence
+only for a community without configured accounting. The signed manifest names
+its exact `balance_revision`; stripping either half or mixing scope/epoch fails.
+Beacon authenticates publication metadata, retains its independent monotonic
+floor and includes its expiry in the complete feed deadline. After installation
+a later feed cannot drop it. Economic policy and proof-artifact validation stay
+with the canonical accounting owner; no economic schema is copied here.
+`balance::Balance` retains signed bytes and original authenticated JSON, never
+a member verdict. Its presence gives no current-record or settlement authority.

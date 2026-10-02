@@ -1,5 +1,6 @@
 //! Beacon assembles signed public trust publications with injected I/O and time.
 #![forbid(unsafe_code)]
+pub mod balance;
 pub mod document;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -63,6 +64,10 @@ pub trait Publisher: Send {
     }
     fn publish(&mut self, kind: Kind, now: u64) -> impl Future<Output = Result<Vec<u8>>> + Send;
     fn manifest(&mut self, now: u64) -> impl Future<Output = Result<Vec<u8>>> + Send;
+    /// Original canonical Balance document, when this community has accounting.
+    fn balance(&mut self, _now: u64) -> impl Future<Output = Result<Option<Vec<u8>>>> + Send {
+        std::future::ready(Ok(None))
+    }
 }
 
 /// The existing door transport. Fields are public data, never authority by type.
@@ -80,6 +85,8 @@ pub struct Feed {
     pub communities: Vec<u8>,
     pub revocations: Vec<u8>,
     pub schema_versions: Vec<u8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub balance: Option<Vec<u8>>,
 }
 impl Feed {
     fn documents(&self) -> [&[u8]; 5] {
@@ -130,6 +137,8 @@ struct Manifest {
     policy_epoch: u64,
     key_ring: Vec<u8>,
     schema_version: u32,
+    #[serde(default)]
+    balance_revision: Option<u64>,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -147,6 +156,7 @@ pub struct Publication {
     feed: Arc<Feed>,
     deadline: u64,
     revisions: [u64; 5],
+    balance: Option<balance::Balance>,
 }
 
 /// Preserve the door's original sequence. The publisher persists each signed
@@ -157,6 +167,7 @@ pub async fn collect(publisher: &mut impl Publisher, now: u64) -> Result<Publica
     let communities = publisher.publish(Kind::Communities, now).await?;
     let revocations = publisher.publish(Kind::Revocations, now).await?;
     let schema_versions = publisher.publish(Kind::SchemaVersions, now).await?;
+    let balance_bytes = publisher.balance(now).await?;
     let manifest = publisher.manifest(now).await?;
     let ring = publisher.key_ring()?;
     let key_transitions = publisher.key_transitions()?;
@@ -185,6 +196,7 @@ pub async fn collect(publisher: &mut impl Publisher, now: u64) -> Result<Publica
         communities,
         revocations,
         schema_versions,
+        balance: balance_bytes,
     };
     let mut revisions = [0; 5];
     for ((kind, bytes), revision) in KINDS.into_iter().zip(feed.documents()).zip(&mut revisions) {
@@ -208,12 +220,23 @@ pub async fn collect(publisher: &mut impl Publisher, now: u64) -> Result<Publica
         *revision = snapshot.revision;
         deadline = deadline.min(until);
     }
+    let balance = match (&feed.balance, view.balance_revision) {
+        (None, None) => None,
+        (Some(bytes), Some(revision)) if revision <= view.revision => {
+            let material =
+                balance::Balance::verify(&ring, bytes, view.policy_epoch, revision, now)?;
+            deadline = deadline.min(material.valid_until());
+            Some(material)
+        }
+        _ => return Err(Error::Incoherent),
+    };
     Ok(Publication {
         observed_at: now,
         community: view.community,
         feed: Arc::new(feed),
         deadline,
         revisions,
+        balance,
     })
 }
 fn verify<T: serde::de::DeserializeOwned>(
@@ -291,6 +314,13 @@ impl Beacon {
                 if new_revision == old_revision && new_bytes != old_bytes {
                     return Err(Error::Equivocation);
                 }
+            }
+            if let Some(previous) = &old.balance {
+                candidate
+                    .balance
+                    .as_ref()
+                    .ok_or(Error::Rollback)?
+                    .check_successor(previous)?;
             }
         }
         let feed = candidate.feed.clone();
