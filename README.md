@@ -38,3 +38,13 @@ a later feed cannot drop it. Economic policy and proof-artifact validation stay
 with the canonical accounting owner; no economic schema is copied here.
 `balance::Balance` retains signed bytes and original authenticated JSON, never
 a member verdict. Its presence gives no current-record or settlement authority.
+
+## Common root-board public material
+
+The optional `root_board` field carries Policy's `cplc.root-board.v1` COSE
+publication. The signed manifest binds its exact `root_board_revision`; scope,
+epoch, per-kind revision, expiry and continued presence follow the Balance path.
+`root_board::Payload` holds routing metadata and original CPSD descriptor bytes.
+`root_board::RootBoard` authenticates and retains those bytes; it does not decode
+CPSD, establish a role or validate a credential. Existing CPSD consumers own
+those semantic checks after obtaining a current authenticated publication.

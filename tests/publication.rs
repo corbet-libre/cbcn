@@ -65,6 +65,9 @@ impl Publisher for Source {
     async fn manifest(&mut self, _: u64) -> Result<Vec<u8>> {
         Ok(self.feed.manifest.clone())
     }
+    async fn root_board(&mut self, _: u64) -> Result<Option<Vec<u8>>> {
+        Ok(self.feed.root_board.clone())
+    }
     async fn balance(&mut self, _: u64) -> Result<Option<Vec<u8>>> {
         Ok(self.feed.balance.clone())
     }
@@ -117,6 +120,7 @@ fn source(community: &str, revision: u64, epoch: u64) -> (Source, Signer) {
                 revocations,
                 schema_versions,
                 balance: None,
+                root_board: None,
             },
             fail: None,
         },
@@ -595,5 +599,206 @@ shared_test!(
             .install(block_on(collect(&mut newest, NOW)).unwrap(), NOW)
             .unwrap();
         assert_eq!(installed.revision, 12);
+    }
+);
+
+fn add_root_board(source: &mut Source, signer: &mut Signer, revision: u64) {
+    let descriptor: Vec<u8> = include_bytes!("fixtures/root-board-public.bin").to_vec();
+    let value = json!({"purpose":"cplc.root-board.v1","community":source.ring.issuer(),"revision":revision,"policy_epoch":source.feed.policy_epoch,"descriptor":descriptor});
+    source.feed.root_board = Some(
+        signer
+            .sign(
+                csgn::Kind::SettingsSnapshot,
+                &serde_json::to_vec(&value).unwrap(),
+                NOW,
+                NOW + 100,
+            )
+            .unwrap(),
+    );
+    edit(
+        signer,
+        &mut source.feed.manifest,
+        csgn::Kind::SettingsSnapshot,
+        |v| v["root_board_revision"] = json!(revision),
+    );
+}
+shared_test!(
+    root_board_is_original_owner_bytes_bound_to_the_complete_manifest,
+    {
+        let (mut source, mut signer) = source("alpha", 10, 1);
+        add_root_board(&mut source, &mut signer, 1);
+        let bytes = source.feed.root_board.clone().unwrap();
+        let verified = root_board::RootBoard::verify(&source.ring, &bytes, 1, 1, NOW).unwrap();
+        assert_eq!(verified.signed_bytes(), bytes);
+        assert_eq!(verified.revision(), 1);
+        assert_eq!(verified.valid_until(), NOW + 100);
+        assert!(matches!(
+            root_board::RootBoard::verify(&source.ring, &bytes, 1, 1, NOW + 100),
+            Err(Error::Signature)
+        ));
+        let mut beacon = Beacon::default();
+        let installed = beacon
+            .install(block_on(collect(&mut source, NOW)).unwrap(), NOW)
+            .unwrap();
+        assert_eq!(installed.root_board, source.feed.root_board);
+        beacon
+            .install(block_on(collect(&mut source, NOW)).unwrap(), NOW)
+            .unwrap();
+        assert_eq!(beacon.current(NOW + 100), Err(Error::Expired));
+    }
+);
+shared_test!(
+    root_board_missing_mismatched_or_regressed_never_replaces_the_feed,
+    {
+        for case in 0..5 {
+            let (mut source, mut signer) = source("alpha", 10, 1);
+            add_root_board(&mut source, &mut signer, 1);
+            match case {
+                0 => source.feed.root_board = None,
+                1 => edit(
+                    &mut signer,
+                    &mut source.feed.manifest,
+                    csgn::Kind::SettingsSnapshot,
+                    |v| {
+                        v.as_object_mut().unwrap().remove("root_board_revision");
+                    },
+                ),
+                2 => edit(
+                    &mut signer,
+                    &mut source.feed.manifest,
+                    csgn::Kind::SettingsSnapshot,
+                    |v| v["root_board_revision"] = json!(11),
+                ),
+                3 => edit(
+                    &mut signer,
+                    source.feed.root_board.as_mut().unwrap(),
+                    csgn::Kind::SettingsSnapshot,
+                    |v| v["policy_epoch"] = json!(2),
+                ),
+                _ => source.feed.root_board.as_mut().unwrap()[0] ^= 1,
+            }
+            rejected(
+                &mut source,
+                if case == 4 {
+                    Error::Signature
+                } else {
+                    Error::Incoherent
+                },
+            );
+        }
+        for case in 0..3 {
+            let (mut first, mut signer) = source("alpha", 10, 1);
+            add_root_board(&mut first, &mut signer, 2);
+            let mut beacon = Beacon::default();
+            let original = beacon
+                .install(block_on(collect(&mut first, NOW)).unwrap(), NOW)
+                .unwrap();
+            let (mut next, mut signer) = source("alpha", 11, 1);
+            match case {
+                0 => (),
+                1 => add_root_board(&mut next, &mut signer, 1),
+                _ => {
+                    add_root_board(&mut next, &mut signer, 2);
+                    edit(
+                        &mut signer,
+                        next.feed.root_board.as_mut().unwrap(),
+                        csgn::Kind::SettingsSnapshot,
+                        |v| v["descriptor"] = json!(vec![7]),
+                    );
+                }
+            }
+            assert_eq!(
+                beacon.install(block_on(collect(&mut next, NOW)).unwrap(), NOW),
+                Err(if case == 2 {
+                    Error::Equivocation
+                } else {
+                    Error::Rollback
+                })
+            );
+            assert_eq!(beacon.current(NOW).unwrap(), original);
+        }
+    }
+);
+shared_test!(
+    root_board_routing_header_refuses_wrong_purpose_scope_bounds_and_encoding,
+    {
+        let (source, mut signer) = source("alpha", 10, 1);
+        let descriptor: Vec<u8> = include_bytes!("fixtures/root-board-public.bin").to_vec();
+        for case in 0..12 {
+            let mut value = json!({"purpose":"cplc.root-board.v1","community":"alpha","revision":1,"policy_epoch":1,"descriptor":descriptor});
+            let (mut revision, mut epoch) = (1, 1);
+            match case {
+                0 => value["purpose"] = json!("other"),
+                1 => value["community"] = json!("other"),
+                2 => value["revision"] = json!(2),
+                3 => {
+                    revision = 0;
+                    value["revision"] = json!(0);
+                }
+                4 => {
+                    revision = i64::MAX as u64 + 1;
+                    value["revision"] = json!(revision);
+                }
+                5 => value["policy_epoch"] = json!(2),
+                6 => {
+                    epoch = 0;
+                    value["policy_epoch"] = json!(0);
+                }
+                7 => {
+                    epoch = i64::MAX as u64 + 1;
+                    value["policy_epoch"] = json!(epoch);
+                }
+                8 => value["descriptor"] = json!([]),
+                9 => value["extra"] = json!(1),
+                10 => {
+                    value.as_object_mut().unwrap().remove("purpose");
+                }
+                _ => value["revision"] = json!("1"),
+            }
+            let bytes = signer
+                .sign(
+                    csgn::Kind::SettingsSnapshot,
+                    &serde_json::to_vec(&value).unwrap(),
+                    NOW,
+                    NOW + 100,
+                )
+                .unwrap();
+            assert!(matches!(
+                root_board::RootBoard::verify(&source.ring, &bytes, epoch, revision, NOW),
+                Err(Error::Incoherent)
+            ));
+        }
+        let value = json!({"purpose":"cplc.root-board.v1","community":"alpha","revision":1,"policy_epoch":1,"descriptor":descriptor});
+        let raw = serde_json::to_vec(&value).unwrap();
+        let mut dup = raw.clone();
+        dup.pop();
+        dup.extend_from_slice(br#","purpose":"cplc.root-board.v1""#);
+        dup.push(b'}');
+        let bytes = signer
+            .sign(csgn::Kind::SettingsSnapshot, &dup, NOW, NOW + 100)
+            .unwrap();
+        assert!(matches!(
+            root_board::RootBoard::verify(&source.ring, &bytes, 1, 1, NOW),
+            Err(Error::Incoherent)
+        ));
+        let bytes = signer
+            .sign(csgn::Kind::SchemaSnapshot, &raw, NOW, NOW + 100)
+            .unwrap();
+        assert!(matches!(
+            root_board::RootBoard::verify(&source.ring, &bytes, 1, 1, NOW),
+            Err(Error::Signature)
+        ));
+        let mut bytes = signer
+            .sign(csgn::Kind::SettingsSnapshot, &raw, NOW, NOW + 100)
+            .unwrap();
+        bytes[0] ^= 1;
+        assert!(matches!(
+            root_board::RootBoard::verify(&source.ring, &bytes, 1, 1, NOW),
+            Err(Error::Signature)
+        ));
+        assert!(matches!(
+            root_board::RootBoard::verify(&source.ring, &vec![0; (1 << 20) + 8193], 1, 1, NOW),
+            Err(Error::Incoherent)
+        ));
     }
 );

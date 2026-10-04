@@ -32,3 +32,7 @@ commands = [["python3", ".ci/acceptance.py", "preflight"]]
 [checks.acceptance]
 kind = "commands"
 commands = [["python3", ".ci/acceptance.py", "run"]]
+
+[checks.root-board-native]
+kind = "commands"
+commands = [["bash", ".ci/root-board-native.sh"]]

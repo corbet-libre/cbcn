@@ -7,6 +7,24 @@ variables:
   DEPENDENCY_SOURCE_SHA256: {default: ""}
   SOURCE_ARCHIVE: {default: ""}
   SOURCE_SHA256: {default: ""}
+  ROOT_BOARD_CPLC_SOURCE_ARCHIVE: {default: ""}
+  ROOT_BOARD_CPLC_SOURCE_SHA256: {default: ""}
+  ROOT_BOARD_CCHR_SOURCE_ARCHIVE: {default: ""}
+  ROOT_BOARD_CCHR_SOURCE_SHA256: {default: ""}
+  ROOT_BOARD_CPSD_SOURCE_ARCHIVE: {default: ""}
+  ROOT_BOARD_CPSD_SOURCE_SHA256: {default: ""}
+  ROOT_BOARD_CGRD_SOURCE_ARCHIVE: {default: ""}
+  ROOT_BOARD_CGRD_SOURCE_SHA256: {default: ""}
+  ROOT_BOARD_CKYH_SOURCE_ARCHIVE: {default: ""}
+  ROOT_BOARD_CKYH_SOURCE_SHA256: {default: ""}
+  ROOT_BOARD_CBLC_SOURCE_ARCHIVE: {default: ""}
+  ROOT_BOARD_CBLC_SOURCE_SHA256: {default: ""}
+  ROOT_BOARD_CWLT_SOURCE_ARCHIVE: {default: ""}
+  ROOT_BOARD_CWLT_SOURCE_SHA256: {default: ""}
+  ROOT_BOARD_CZKP_SOURCE_ARCHIVE: {default: ""}
+  ROOT_BOARD_CZKP_SOURCE_SHA256: {default: ""}
+  ROOT_BOARD_CKMG_SOURCE_ARCHIVE: {default: ""}
+  ROOT_BOARD_CKMG_SOURCE_SHA256: {default: ""}
   CI_TOOL_ARCHIVE: {default: ""}
   CI_TOOL_SHA256: {default: ""}
   CI_TOOL_BINARY: {default: ""}

@@ -2,6 +2,7 @@
 #![forbid(unsafe_code)]
 pub mod balance;
 pub mod document;
+pub mod root_board;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -64,6 +65,10 @@ pub trait Publisher: Send {
     }
     fn publish(&mut self, kind: Kind, now: u64) -> impl Future<Output = Result<Vec<u8>>> + Send;
     fn manifest(&mut self, now: u64) -> impl Future<Output = Result<Vec<u8>>> + Send;
+    /// Original common root-board public descriptor, when configured.
+    fn root_board(&mut self, _now: u64) -> impl Future<Output = Result<Option<Vec<u8>>>> + Send {
+        std::future::ready(Ok(None))
+    }
     /// Original canonical Balance document, when this community has accounting.
     fn balance(&mut self, _now: u64) -> impl Future<Output = Result<Option<Vec<u8>>>> + Send {
         std::future::ready(Ok(None))
@@ -87,6 +92,8 @@ pub struct Feed {
     pub schema_versions: Vec<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub balance: Option<Vec<u8>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_board: Option<Vec<u8>>,
 }
 impl Feed {
     fn documents(&self) -> [&[u8]; 5] {
@@ -139,6 +146,8 @@ struct Manifest {
     schema_version: u32,
     #[serde(default)]
     balance_revision: Option<u64>,
+    #[serde(default)]
+    root_board_revision: Option<u64>,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -157,6 +166,7 @@ pub struct Publication {
     deadline: u64,
     revisions: [u64; 5],
     balance: Option<balance::Balance>,
+    root_board: Option<root_board::RootBoard>,
 }
 
 /// Preserve the door's original sequence. The publisher persists each signed
@@ -168,6 +178,7 @@ pub async fn collect(publisher: &mut impl Publisher, now: u64) -> Result<Publica
     let revocations = publisher.publish(Kind::Revocations, now).await?;
     let schema_versions = publisher.publish(Kind::SchemaVersions, now).await?;
     let balance_bytes = publisher.balance(now).await?;
+    let root_board_bytes = publisher.root_board(now).await?;
     let manifest = publisher.manifest(now).await?;
     let ring = publisher.key_ring()?;
     let key_transitions = publisher.key_transitions()?;
@@ -197,6 +208,7 @@ pub async fn collect(publisher: &mut impl Publisher, now: u64) -> Result<Publica
         revocations,
         schema_versions,
         balance: balance_bytes,
+        root_board: root_board_bytes,
     };
     let mut revisions = [0; 5];
     for ((kind, bytes), revision) in KINDS.into_iter().zip(feed.documents()).zip(&mut revisions) {
@@ -230,6 +242,16 @@ pub async fn collect(publisher: &mut impl Publisher, now: u64) -> Result<Publica
         }
         _ => return Err(Error::Incoherent),
     };
+    let root_board = match (&feed.root_board, view.root_board_revision) {
+        (None, None) => None,
+        (Some(bytes), Some(revision)) if revision <= view.revision => {
+            let material =
+                root_board::RootBoard::verify(&ring, bytes, view.policy_epoch, revision, now)?;
+            deadline = deadline.min(material.valid_until());
+            Some(material)
+        }
+        _ => return Err(Error::Incoherent),
+    };
     Ok(Publication {
         observed_at: now,
         community: view.community,
@@ -237,6 +259,7 @@ pub async fn collect(publisher: &mut impl Publisher, now: u64) -> Result<Publica
         deadline,
         revisions,
         balance,
+        root_board,
     })
 }
 fn verify<T: serde::de::DeserializeOwned>(
@@ -322,6 +345,17 @@ impl Beacon {
                     .ok_or(Error::Rollback)?
                     .check_successor(previous)?;
             }
+        }
+        if let Some(previous) = self
+            .current
+            .as_ref()
+            .and_then(|old| old.root_board.as_ref())
+        {
+            candidate
+                .root_board
+                .as_ref()
+                .ok_or(Error::Rollback)?
+                .check_successor(previous)?;
         }
         let feed = candidate.feed.clone();
         self.current = Some(candidate);
