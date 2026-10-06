@@ -42,3 +42,16 @@ retain each pending csgn proof before acknowledging it; ordinary issuance never
 increments this public ring sequence. History exhaustion refuses rotation instead
 of silently dropping continuity. Initial feeds omit the empty optional field and
 remain byte-compatible with the existing door protocol.
+
+## Balance public material
+
+The separate `balance` feed field carries the original canonical
+`cblc.public-verifier.v1` COSE document. `Publisher::balance` returns absence
+only for a community without configured accounting. The signed manifest names
+its exact `balance_revision`; stripping either half or mixing scope/epoch fails.
+Beacon authenticates publication metadata, retains its independent monotonic
+floor and includes its expiry in the complete feed deadline. After installation
+a later feed cannot drop it. Economic policy and proof-artifact validation stay
+with the canonical accounting owner; no economic schema is copied here.
+`balance::Balance` retains signed bytes and original authenticated JSON, never
+a member verdict. Its presence gives no current-record or settlement authority.

@@ -5,16 +5,16 @@ edition = "2024"
 rust-version = "1.88"
 description = "Beacon: signed public trust-feed publication and bounded current cache"
 license = "LGPL-3.0-only WITH LGPL-3.0-linking-exception"
-repository = "https://github.com/corbet-foss/cbcn"
+repository = "https://git.corbet.ch/corbet-foss/cbcn.git"
 publish = false
 
 [dependencies]
-csgn = { git = "https://github.com/corbet-foss/csgn", branch = "main", default-features = false }
+csgn = { git = "https://git.corbet.ch/corbet-foss/csgn.git", branch = "v01", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 [dev-dependencies]
-csgn = { git = "https://github.com/corbet-foss/csgn", branch = "main", default-features = false, features = ["volatile-signer"] }
+csgn = { git = "https://git.corbet.ch/corbet-foss/csgn.git", branch = "v01", default-features = false, features = ["volatile-signer"] }
 futures = { version = "0.3", features = ["executor"] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
