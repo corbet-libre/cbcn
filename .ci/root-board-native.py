@@ -14,7 +14,7 @@ ROOT = Path.cwd().resolve()
 REPORT = Path(os.environ['CI_ACCEPTANCE_ARTIFACTS']).resolve(strict=True)
 SELECTOR = 'root-board-native'
 OWNERS = ['cplc', 'cbcn', 'cchr']
-FIRST_PARTY = re.compile(r'git\+https://github\.com/(corbet-foss|corbet-libs|corbet-labs|cmtymeet)/([^?#]+)\?branch=main#([0-9a-f]{40})')
+FIRST_PARTY = re.compile(r'git\+https://git\.corbet\.ch/(corbet-foss|corbet-libs|corbet-labs|cmtymeet)/([^?#]+)\?branch=main#([0-9a-f]{40})')
 
 
 def require(value, message):
@@ -66,7 +66,7 @@ class Qualification:
     def patch_bytes(self, label):
         result = []
         for name in self.contract['patches'][label]:
-            url = 'https://github.com/corbet-foss/cbcn' if name == 'cbcn' else self.contract['candidates'][name]['repository']
+            url = 'https://git.corbet.ch/corbet-foss/cbcn' if name == 'cbcn' else self.contract['candidates'][name]['repository']
             result.append(f'[patch.{json.dumps(url)}]\n{name} = {{ path = {json.dumps(str(self.sources[name]))} }}\n')
         return '\n'.join(result).encode()
 
@@ -283,7 +283,7 @@ class Qualification:
 
 def main():
     require(os.environ.get('CI') == 'crow' and os.environ.get('CHECKS') == SELECTOR, 'explicit CI selector required')
-    require(os.environ.get('CI_REPOSITORY_URL', '').removesuffix('.git') == 'https://github.com/corbet-foss/cbcn',
+    require(os.environ.get('CI_REPOSITORY_URL', '').removesuffix('.git') == 'https://git.corbet.ch/corbet-foss/cbcn',
             'canonical Beacon source required')
     for name, length in [('CI_COMMIT_SHA', 40), ('SOURCE_SHA256', 64), ('DEPENDENCY_CLOSURE_SHA256', 64)]:
         require(re.fullmatch(f'[0-9a-f]{{{length}}}', os.environ.get(name, '')), 'missing source identity')
