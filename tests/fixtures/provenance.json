@@ -1,8 +1,8 @@
 {
   "producer_repository": "https://github.com/corbet-foss/cchr",
-  "producer_revision": "41a0e1d7e1b934e4bd069042e4b11bc9de623b53",
+  "producer_revision": "a6217ae07c31330f6c806f2d2e461a9f27d191e9",
   "ci_url": "https://github.com/corbet-foss/cchr/actions/runs/36911320705",
-  "door_revision": "6c5152d13fab5156be149737b3d9463e3c3fbab4",
+  "door_revision": "797d3b3b59ddf980219ca14eab087ad274679f15",
   "sha256": {
     "initial.json": "f4dd3ce6cdd5c142f6d439912f0cccbe4f061a0de9cf9f233545474df9bba2c2",
     "ordinary.json": "f4dd3ce6cdd5c142f6d439912f0cccbe4f061a0de9cf9f233545474df9bba2c2",
