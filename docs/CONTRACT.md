@@ -19,6 +19,21 @@ owns HTTP waiting and cancellation. cplc serializes publication under its existi
 policy lock and persists counters before returning signed bytes. Independent
 native/wasm signatures and original door fixtures are required before acceptance.
 
+## Original optional owner publications
+
+The Publisher may supply the original canonical Balance document and common
+root-board descriptor. Absent owner configuration leaves both fields omitted
+from the existing feed. Supplied documents must match their signed manifest
+revisions, community and policy epoch, and their original signature lifetimes
+bound the complete publication. Once installed, each optional document retains
+its revision floor even after expiry: omission or an older revision refuses, and
+different signed bytes at an equal revision refuse as equivocation.
+
+Beacon authenticates routing metadata and preserves the original bytes. Balance
+owns economic policy and proof-artifact validation; CPSD owns descriptor decoding,
+scope, epoch and credential semantics. These authenticated transport views are
+neither current member records nor decoded credential capabilities.
+
 ## Global reuse
 
 `document::Cache<T>` retains one original signed public document, authenticating
