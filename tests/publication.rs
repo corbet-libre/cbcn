@@ -175,6 +175,32 @@ fn add_balance(source: &mut Source, signer: &mut Signer, revision: u64) {
 }
 
 shared_test!(
+    current_balance_capture_authenticates_the_original_owner_bytes,
+    {
+        let fixture: Value =
+            serde_json::from_slice(include_bytes!("fixtures/balance-publication-v2.json")).unwrap();
+        let ring = csgn::KeyRing::from_cbor(
+            &serde_json::from_value::<Vec<u8>>(fixture["configuredFixtureRing"].clone()).unwrap(),
+        )
+        .unwrap();
+        let original: Vec<u8> = serde_json::from_value(fixture["signed"].clone()).unwrap();
+        let verified = balance::Balance::verify(&ring, &original, 1, 1, 200).unwrap();
+        assert_eq!(verified.signed_bytes(), original);
+        let payload: Value = serde_json::from_slice(verified.payload()).unwrap();
+        assert_eq!(payload, fixture["material"]);
+        assert_eq!(payload["purpose"], "cblc.public-verifier.v2");
+        assert_eq!(payload["admissionPolicyDigest"], json!(vec![3_u8; 32]));
+        assert_eq!(verified.valid_until(), 900);
+        let mut damaged = original.clone();
+        *damaged.last_mut().unwrap() ^= 1;
+        assert!(matches!(
+            balance::Balance::verify(&ring, &damaged, 1, 1, 200),
+            Err(Error::Signature)
+        ));
+    }
+);
+
+shared_test!(
     legacy_balance_capture_refuses_and_current_routing_binds_the_complete_manifest,
     {
         let fixture: Value =
