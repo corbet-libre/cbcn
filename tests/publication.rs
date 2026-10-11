@@ -660,6 +660,17 @@ shared_test!(
         let bytes = source.feed.root_board.clone().unwrap();
         let verified = root_board::RootBoard::verify(&source.ring, &bytes, 1, 1, NOW).unwrap();
         assert_eq!(verified.signed_bytes(), bytes);
+        let signed = source
+            .ring
+            .verify(&bytes, csgn::Kind::SettingsSnapshot, NOW)
+            .unwrap();
+        assert_eq!(verified.payload(), signed.payload());
+        let payload: root_board::Payload = serde_json::from_slice(verified.payload()).unwrap();
+        assert_eq!(
+            payload.descriptor.as_slice(),
+            include_bytes!("fixtures/root-board-public.bin").as_slice()
+        );
+        assert_eq!(verified.check_successor(&verified), Ok(()));
         assert_eq!(verified.revision(), 1);
         assert_eq!(verified.valid_until(), NOW + 100);
         assert!(matches!(
@@ -674,6 +685,13 @@ shared_test!(
         beacon
             .install(block_on(collect(&mut source, NOW)).unwrap(), NOW)
             .unwrap();
+        let (mut next, mut signer) = self::source("alpha", 11, 1);
+        add_root_board(&mut next, &mut signer, 2);
+        let installed = beacon
+            .install(block_on(collect(&mut next, NOW)).unwrap(), NOW)
+            .unwrap();
+        assert_eq!(installed.revision, 11);
+        assert_eq!(installed.root_board, next.feed.root_board);
         assert_eq!(beacon.current(NOW + 100), Err(Error::Expired));
     }
 );
