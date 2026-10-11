@@ -38,7 +38,7 @@ impl Balance {
             .map_err(|_| Error::Signature)?;
         let header: Header =
             serde_json::from_slice(signed.payload()).map_err(|_| Error::Incoherent)?;
-        if header.purpose != "cblc.public-verifier.v1"
+        if header.purpose != "cblc.public-verifier.v2"
             || header.community != ring.issuer()
             || header.revision != revision
             || revision == 0

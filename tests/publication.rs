@@ -151,12 +151,11 @@ fn rejected(source: &mut Source, error: Error) {
 }
 
 fn add_balance(source: &mut Source, signer: &mut Signer, revision: u64) {
-    let fixture: Value =
-        serde_json::from_slice(include_bytes!("fixtures/balance-material.json")).unwrap();
-    let mut material = fixture["material"].clone();
-    material["community"] = json!(source.ring.issuer());
-    material["revision"] = json!(revision);
-    material["policyEpoch"] = json!(source.feed.policy_epoch);
+    // Beacon validates authenticated routing only. This deliberately incomplete
+    // header cannot be decoded as accounting material or authorize any proof.
+    let material = json!({"purpose":"cblc.public-verifier.v2",
+        "community":source.ring.issuer(), "revision":revision,
+        "policyEpoch":source.feed.policy_epoch});
     source.feed.balance = Some(
         signer
             .sign(
@@ -176,7 +175,7 @@ fn add_balance(source: &mut Source, signer: &mut Signer, revision: u64) {
 }
 
 shared_test!(
-    balance_is_original_owner_bytes_bound_to_the_complete_manifest,
+    legacy_balance_capture_refuses_and_current_routing_binds_the_complete_manifest,
     {
         let fixture: Value =
             serde_json::from_slice(include_bytes!("fixtures/balance-material.json")).unwrap();
@@ -185,14 +184,10 @@ shared_test!(
         )
         .unwrap();
         let original: Vec<u8> = serde_json::from_value(fixture["signed"].clone()).unwrap();
-        let verified = balance::Balance::verify(&ring, &original, 1, 1, 200).unwrap();
-        assert_eq!(verified.signed_bytes(), original);
-        assert_eq!(
-            serde_json::from_slice::<Value>(verified.payload()).unwrap(),
-            fixture["material"]
-        );
-        assert_eq!(verified.revision(), 1);
-        assert_eq!(verified.valid_until(), 900);
+        assert!(matches!(
+            balance::Balance::verify(&ring, &original, 1, 1, 200),
+            Err(Error::Incoherent)
+        ));
         assert!(matches!(
             balance::Balance::verify(&ring, &original, 1, 1, 900),
             Err(Error::Signature)
@@ -200,6 +195,14 @@ shared_test!(
 
         let (mut source, mut signer) = source("alpha", 10, 1);
         add_balance(&mut source, &mut signer, 1);
+        let bytes = source.feed.balance.as_ref().unwrap();
+        let verified = balance::Balance::verify(&source.ring, bytes, 1, 1, NOW).unwrap();
+        assert_eq!(verified.signed_bytes(), bytes);
+        let header: Value = serde_json::from_slice(verified.payload()).unwrap();
+        assert_eq!(header["purpose"], "cblc.public-verifier.v2");
+        assert_eq!(header["community"], "alpha");
+        assert_eq!(verified.revision(), 1);
+        assert_eq!(verified.valid_until(), NOW + 100);
         let mut beacon = Beacon::default();
         let installed = beacon
             .install(block_on(collect(&mut source, NOW)).unwrap(), NOW)
@@ -289,8 +292,8 @@ shared_test!(
     balance_routing_header_refuses_wrong_purpose_scope_bounds_and_encoding,
     {
         let (source, mut signer) = source("alpha", 10, 1);
-        for case in 0..9 {
-            let mut value = json!({"purpose":"cblc.public-verifier.v1", "community":"alpha", "revision":1, "policyEpoch":1});
+        for case in 0..10 {
+            let mut value = json!({"purpose":"cblc.public-verifier.v2", "community":"alpha", "revision":1, "policyEpoch":1});
             let mut revision = 1;
             let mut epoch = 1;
             match case {
@@ -310,6 +313,7 @@ shared_test!(
                     epoch = 0;
                     value["policyEpoch"] = json!(0);
                 }
+                9 => value["purpose"] = json!("cblc.public-verifier.v1"),
                 7 => {
                     epoch = i64::MAX as u64 + 1;
                     value["policyEpoch"] = json!(epoch);
