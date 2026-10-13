@@ -148,6 +148,9 @@ struct Manifest {
     balance_revision: Option<u64>,
     #[serde(default)]
     root_board_revision: Option<u64>,
+    /// Oblivious HTTP directory: the consumer verifies it, the Beacon only carries it.
+    #[serde(default, rename = "ohttp")]
+    _ohttp: Option<serde::de::IgnoredAny>,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
