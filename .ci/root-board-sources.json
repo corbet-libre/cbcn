@@ -1,0 +1,102 @@
+{
+  "candidates": {
+    "cblc": {
+      "archive_bytes": 1669120,
+      "archive_sha256": "d7aec56c1761a3eb641b21a876b10409fb00bb4ea72cd82e5920990e7c623c8c",
+      "commit": "b0919bb3466a0ae17f079f63d9c4bbf5fa4cddb6",
+      "repository": "https://github.com/corbet-libs/cblc",
+      "tree": "72463f9963463306cf285559999dd3e3f97c6241",
+      "version": "0.0.0"
+    },
+    "cchr": {
+      "archive_bytes": 327680,
+      "archive_sha256": "3320e5c3fd6ada3bf9290dc4ea156ba737519ee924a536f473c35d57b6fc7155",
+      "commit": "68715ce9edf9e05089ee8a5b0aae93f771fc5ac1",
+      "repository": "https://github.com/corbet-foss/cchr",
+      "tree": "eff5306f24ca5c78bab219a15ec0e283b000f6d7",
+      "version": "0.1.0"
+    },
+    "cgrd": {
+      "archive_bytes": 430080,
+      "archive_sha256": "f52f90cc593a58a13c195667887737d2fce5b0d6d6d512d2c15eead1b15e568a",
+      "commit": "699878898662195327012cc00ac10fdd178264e6",
+      "repository": "https://github.com/corbet-foss/cgrd",
+      "tree": "fac086bcc8f54e67960c6755a13228215ad18048",
+      "version": "0.0.0"
+    },
+    "ckmg": {
+      "archive_bytes": 481280,
+      "archive_sha256": "21004edc26a9a4e31531f7f7f13c4e0273f73f8b2e8b061bb29088a3c9ec84af",
+      "commit": "6910adaa591c1f2e9f2b51da8e2ac2a5716cbaca",
+      "repository": "https://github.com/corbet-foss/ckmg",
+      "tree": "d4a56da981f9745bb04d2a15221d2a354bc65719",
+      "version": "0.0.0"
+    },
+    "ckyh": {
+      "archive_bytes": 481280,
+      "archive_sha256": "e6363097a2e292df83705dc08dc23982e919c8026ad052cc8964819a7a133bf3",
+      "commit": "a06a5c5cc9c3989bd190fac7b096baaa8c911b38",
+      "repository": "https://github.com/corbet-foss/ckyh",
+      "tree": "760df4b17d7221b50d25596bae2ad62b66a04631",
+      "version": "0.0.0"
+    },
+    "cplc": {
+      "archive_bytes": 522240,
+      "archive_sha256": "f6fd373c02aa666106677b0a48540924953640f4b58741d8159dc4caf81a56d5",
+      "commit": "2a4397a223895df540bea2d1bc931950ad8d99b6",
+      "repository": "https://github.com/corbet-libs/cplc",
+      "tree": "8d473a53cd124bf3984b67bf0d5768036a278a8c",
+      "version": "0.0.0"
+    },
+    "cpsd": {
+      "archive_bytes": 768000,
+      "archive_sha256": "0933b2b9968fda98e38df27b95fe986202b435745cf821acefb495a4fb573a8f",
+      "commit": "2ac55872fa396db8d88e238dd4d16cd855a1d20e",
+      "repository": "https://github.com/corbet-foss/cpsd",
+      "tree": "10153379af3c598ffeb9c59c9866606a28451e64",
+      "version": "0.0.0"
+    },
+    "cwlt": {
+      "archive_bytes": 399360,
+      "archive_sha256": "60e0a32421b9ed58eda7c520df308c9fe3db8195ea27865530e40a5864eb8922",
+      "commit": "4326d274556fd6da447d67d1fd39cc46db70c18c",
+      "repository": "https://github.com/corbet-foss/cwlt",
+      "tree": "09198a569326ba5a24675fcd618bfc038df4a02f",
+      "version": "0.0.0"
+    },
+    "czkp": {
+      "archive_bytes": 235520,
+      "archive_sha256": "f6c26c336f671d209c109f6d35fe02baf0dc8e10836ec3602f63ba6a47c97908",
+      "commit": "78be98c90e821ab51497d6786bded4b85462787c",
+      "repository": "https://github.com/corbet-foss/czkp",
+      "tree": "8b55edda29d074e763e4153aa8ee33d891ed8e02",
+      "version": "0.0.0"
+    }
+  },
+  "patches": {
+    "cbcn": [],
+    "cchr": [
+      "cbcn",
+      "cgrd",
+      "ckyh"
+    ],
+    "cplc": [
+      "cbcn",
+      "cchr",
+      "cgrd",
+      "ckyh",
+      "cpsd",
+      "cblc",
+      "cwlt",
+      "czkp",
+      "ckmg"
+    ]
+  },
+  "resolution_only": {
+    "cbcn": [],
+    "cchr": [],
+    "cplc": [
+      "ckmg"
+    ]
+  }
+}
