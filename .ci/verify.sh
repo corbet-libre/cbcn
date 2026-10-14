@@ -13,6 +13,7 @@ export GITHUB_PATH="${GITHUB_PATH:-$RUNNER_TEMP/github_path}"
 touch "$GITHUB_PATH"
 python3 .github/check-first-party.py
 rustc --version
+bash .ci/update-our-crates.sh
 cargo fmt --all --check
 python3 scripts/check-fixtures.py
 cargo clippy --locked --all-targets -- -D warnings
