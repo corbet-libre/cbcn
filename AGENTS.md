@@ -1,22 +1,31 @@
-# Agent instructions
+# cbcn — agent instructions
 
-Write code, comments and documentation in English.
+Work in a lane, never in ~/agents/scratch/ws. From the repo dir:
+`cargo fmt --all --check`,
+`cargo clippy --locked --all-targets -- -D warnings`,
+`cargo test --locked`,
+`cargo check --locked --target wasm32-unknown-unknown`,
+`CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER=wasm-bindgen-test-runner cargo test
+--locked --target wasm32-unknown-unknown --test publication --test document`.
+First-party git deps on branch main, one locked revision per crate
+(`python3 .github/check-first-party.py`). Fixtures: `python3 scripts/check-fixtures.py`.
+No registry publication.
 
-## Product boundary
+Invariants (rules: docs/CONTRACT.md):
+- Failed collect/install never replaces the cache or moves the deadline
+  (tests/publication.rs:402).
+- Revision/epoch regression refuses as Rollback; same-revision different bytes
+  as Equivocation (tests/publication.rs:484).
+- Install before the authenticated collection time refuses as ClockRegression
+  (tests/publication.rs:526).
+- Optional balance/root_board bind the exact manifest revision; after install a
+  drop, regress or equivocation refuses and the floor stays
+  (tests/publication.rs:244, :698).
+- Equal floors allow refresh only with identical payload + nondecreasing issuance
+  (tests/document.rs:247).
+- Key transitions are transported, never authenticated: strictly increasing,
+  at most 256 entries and 1 MiB of proof bytes (tests/publication.rs:535).
+- No re-signing: owner bytes install byte-identical (tests/publication.rs:371).
 
-- Beacon: own signed public trust-feed assembly and cache under Policy; signing and persistence belong to injected owners.
-- Read docs/CONTRACT.md before changing the public boundary.
-- Survey maintained libraries first; record candidates and reasons in README.md.
-- Reuse csgn verification and cshm schema semantics. No cryptographic primitives.
-- No member queries, activity logs, identifiers in diagnostics, private keys or SQL storage.
-- Inject time and I/O; invalid trust never becomes authority.
-- Licence: LGPL-3.0-only WITH LGPL-3.0-linking-exception.
-
-## Quality boundary
-
-- Run formatting, strict Clippy, tests and wasm32 checks in GitHub Actions.
-- Execute shared vectors on wasm; compile-only is insufficient.
-- Do not run Cargo locally. Never deploy or publish registries.
-- Use first-party Git dependencies on branch main, one full locked revision per crate.
-- Commit explicit paths, plain English imperative messages, no AI attribution.
-- Pull with rebase before every push; never force-push.
+Pointers: docs/CONTRACT.md, docs/COVERAGE.md, tests/publication.rs,
+tests/document.rs, scripts/check-fixtures.py.
