@@ -36,7 +36,7 @@ case "${1:?selected check required}" in
       test -x "$CHROMEDRIVER"
       unset NO_HEADLESS
     fi
-    cargo test --locked --target wasm32-unknown-unknown --test publication --test document
+    cargo test --locked --target wasm32-unknown-unknown --test it
     ;;
   coverage)
     cargo llvm-cov --locked --branch --ignore-filename-regex '(^|/)(tests|scripts)/' --json --output-path "$report_dir/coverage.json"

@@ -23,7 +23,7 @@ bash scripts/wasm-runner.sh
 # scripts/wasm-runner.sh only appends the runner dir (GHA GITHUB_PATH
 # convention); reload PATH from the file so the test runner resolves.
 export PATH="$(tail -n 1 "$GITHUB_PATH"):$PATH"
-CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER=wasm-bindgen-test-runner cargo test --locked --target wasm32-unknown-unknown --test publication --test document
+CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER=wasm-bindgen-test-runner cargo test --locked --target wasm32-unknown-unknown --test it
 rustup run nightly rustc --version
 NIGHTLY_RUSTC="$(rustup which --toolchain nightly rustc)"
 NIGHTLY_CARGO="$(rustup which --toolchain nightly cargo)"

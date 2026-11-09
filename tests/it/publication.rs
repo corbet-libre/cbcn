@@ -178,7 +178,8 @@ shared_test!(
     current_balance_capture_authenticates_the_original_owner_bytes,
     {
         let fixture: Value =
-            serde_json::from_slice(include_bytes!("fixtures/balance-publication-v2.json")).unwrap();
+            serde_json::from_slice(include_bytes!("../fixtures/balance-publication-v2.json"))
+                .unwrap();
         let ring = csgn::KeyRing::from_cbor(
             &serde_json::from_value::<Vec<u8>>(fixture["configuredFixtureRing"].clone()).unwrap(),
         )
@@ -204,7 +205,7 @@ shared_test!(
     legacy_balance_capture_refuses_and_current_routing_binds_the_complete_manifest,
     {
         let fixture: Value =
-            serde_json::from_slice(include_bytes!("fixtures/balance-material.json")).unwrap();
+            serde_json::from_slice(include_bytes!("../fixtures/balance-material.json")).unwrap();
         let ring = csgn::KeyRing::from_cbor(
             &serde_json::from_value::<Vec<u8>>(fixture["configuredFixtureRing"].clone()).unwrap(),
         )
@@ -372,12 +373,12 @@ shared_test!(real_door_original_bytes_survive_the_publication_port, {
     let mut beacon = Beacon::default();
     let now = 1_800_000_003;
     for bytes in [
-        include_bytes!("fixtures/initial.json").as_slice(),
-        include_bytes!("fixtures/all.json"),
-        include_bytes!("fixtures/any.json"),
-        include_bytes!("fixtures/threshold.json"),
-        include_bytes!("fixtures/schema.json"),
-        include_bytes!("fixtures/revoked.json"),
+        include_bytes!("../fixtures/initial.json").as_slice(),
+        include_bytes!("../fixtures/all.json"),
+        include_bytes!("../fixtures/any.json"),
+        include_bytes!("../fixtures/threshold.json"),
+        include_bytes!("../fixtures/schema.json"),
+        include_bytes!("../fixtures/revoked.json"),
     ] {
         let feed: Feed = serde_json::from_slice(bytes).unwrap();
         let mut source = Source {
@@ -633,7 +634,7 @@ shared_test!(
 );
 
 fn add_root_board(source: &mut Source, signer: &mut Signer, revision: u64) {
-    let descriptor: Vec<u8> = include_bytes!("fixtures/root-board-public.bin").to_vec();
+    let descriptor: Vec<u8> = include_bytes!("../fixtures/root-board-public.bin").to_vec();
     let value = json!({"purpose":"cplc.root-board.v1","community":source.ring.issuer(),"revision":revision,"policy_epoch":source.feed.policy_epoch,"descriptor":descriptor});
     source.feed.root_board = Some(
         signer
@@ -668,7 +669,7 @@ shared_test!(
         let payload: root_board::Payload = serde_json::from_slice(verified.payload()).unwrap();
         assert_eq!(
             payload.descriptor.as_slice(),
-            include_bytes!("fixtures/root-board-public.bin").as_slice()
+            include_bytes!("../fixtures/root-board-public.bin").as_slice()
         );
         assert_eq!(verified.check_successor(&verified), Ok(()));
         assert_eq!(verified.revision(), 1);
@@ -771,7 +772,7 @@ shared_test!(
     root_board_routing_header_refuses_wrong_purpose_scope_bounds_and_encoding,
     {
         let (source, mut signer) = source("alpha", 10, 1);
-        let descriptor: Vec<u8> = include_bytes!("fixtures/root-board-public.bin").to_vec();
+        let descriptor: Vec<u8> = include_bytes!("../fixtures/root-board-public.bin").to_vec();
         for case in 0..12 {
             let mut value = json!({"purpose":"cplc.root-board.v1","community":"alpha","revision":1,"policy_epoch":1,"descriptor":descriptor});
             let (mut revision, mut epoch) = (1, 1);
